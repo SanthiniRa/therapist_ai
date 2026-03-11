@@ -1,3 +1,8 @@
+// DEPRECATED: this file was an earlier copy of App.js.
+// The real application now lives in src/App.js and is imported by
+// src/index.js. You can safely remove this file or use it for
+// experimentation.
+
 import { useState } from "react";
 
 function App() {
