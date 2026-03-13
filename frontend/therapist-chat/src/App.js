@@ -1,81 +1,18 @@
-import { useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Login from "./login";
+import Chat from "./chat";
 
 function App() {
-
-  const [message, setMessage] = useState("");
-  const [chat, setChat] = useState([]);
-
-  const sendMessage = async () => {
-
-    if(!message) return;
-
-    const newChat = [...chat, {role:"user", text:message}]
-    setChat(newChat)
-
-    try {
-
-      const response = await fetch("https://crispy-goldfish-wrw7p4x6pvqr35vrp-8000.app.github.dev/chat",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
-        },
-        body:JSON.stringify({message})
-      })
-
-      const data = await response.json()
-
-      setChat([...newChat, {role:"ai", text:data.reply}])
-
-    } catch(error){
-
-      setChat([...newChat, {role:"ai", text:"Error contacting therapist AI"}])
-
-    }
-
-    setMessage("")
-  }
-
-
   return (
+    <BrowserRouter>
 
-    <div style={{width:"600px", margin:"auto"}}>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/chat" element={<Chat />} />
+      </Routes>
 
-      <h2>🧠 Therapist AI</h2>
-
-      <div
-        style={{
-          border:"1px solid gray",
-          height:"400px",
-          overflowY:"scroll",
-          padding:"10px",
-          marginBottom:"10px"
-        }}
-      >
-
-        {chat.map((msg,i)=>(
-          <p key={i}>
-            <b>{msg.role === "user" ? "You" : "Therapist"}:</b> {msg.text}
-          </p>
-        ))}
-
-      </div>
-
-      <input
-        style={{width:"80%", padding:"10px"}}
-        value={message}
-        onChange={(e)=>setMessage(e.target.value)}
-        placeholder="How are you feeling today?"
-      />
-
-      <button
-        style={{padding:"10px"}}
-        onClick={sendMessage}
-      >
-        Send
-      </button>
-
-    </div>
-  )
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;

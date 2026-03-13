@@ -2,21 +2,13 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from .agent import therapist_response, safety_check
+from .auth import app as auth_app
 
+app = auth_app
 class ChatRequest(BaseModel):
     message: str
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://crispy-goldfish-wrw7p4x6pvqr35vrp-3000.app.github.dev"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+#app = FastAPI()
 
 @app.get("/")
 def home():
