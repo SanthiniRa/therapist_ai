@@ -34,6 +34,10 @@ function Chat() {
           body: JSON.stringify({ message }),
         }
       );
+      if (response.status === 429) {
+      alert("Too many requests! Please wait a minute.");
+      return;
+      }
       const data = await response.json();
       setChat([...newChat, { role: "ai", text: data.reply }]);
     } catch (err) {

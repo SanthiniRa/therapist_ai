@@ -35,7 +35,10 @@ app.add_middleware(
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key="super-secret-key-change-this"
+    secret_key="super-secret-key-change-this",
+    max_age=3600,
+    same_site="lax",      # For dev, use 'lax'; for prod 'none'
+    https_only=False      # True in prod (requires HTTPS)
 )
 
 @app.get("/login/google")

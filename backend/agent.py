@@ -24,7 +24,7 @@ if not API_KEY:
 
 client = genai.Client(api_key=API_KEY)
 
-MODEL_NAME = "models/gemini-2.5-flash"
+MODEL_NAME = "models/c"
 
 
 # --------------------------------------------------
@@ -49,12 +49,22 @@ def safety_check(text: str) -> bool:
 
     return any(word in text_lower for word in crisis_words)
 
+def select_style(user_message: str):
+    if any(word in user_message.lower() for word in ["stress", "anxious", "overwhelmed"]):
+        return "empathetic"
+    elif any(word in user_message.lower() for word in ["exercise", "cope", "technique"]):
+        return "cbt"
+    elif len(user_message.split()) < 5:
+        return "concise"
+    else:
+        return "friendly"
 
 # --------------------------------------------------
 # Therapist AI Agent
 # --------------------------------------------------
 
 def therapist_response(user_message: str, style: str = "friendly") -> str:
+    style = select_style(user_message)
     """
     Generate an empathetic therapist response using Gemini.
     """
@@ -63,7 +73,6 @@ def therapist_response(user_message: str, style: str = "friendly") -> str:
 You are a compassionate AI therapist assistant.
 
 Guidelines:
--Respond primarily in English, but occasionally include a relevant Tamil cinema dialogue that matches the situation or feeling.
 -Make sure the dialogue fits naturally in the response and enhances encouragement, humor, or reflection.
 - Be empathetic and supportive
 - Use a {style} tone
