@@ -1,7 +1,8 @@
 import os
 import logging
 from google import genai
-
+from .tool import track_mood, save_journal_entry, cbt_reframe
+from .memory import detect_mood
 # --------------------------------------------------
 # Logging
 # --------------------------------------------------
@@ -24,7 +25,7 @@ if not API_KEY:
 
 client = genai.Client(api_key=API_KEY)
 
-MODEL_NAME = "models/c"
+MODEL_NAME = "models/gemini-2.5-flash"
 
 
 # --------------------------------------------------
@@ -63,25 +64,35 @@ def select_style(user_message: str):
 # Therapist AI Agent
 # --------------------------------------------------
 
-def therapist_response(user_message: str, style: str = "friendly") -> str:
-    style = select_style(user_message)
-    """
-    Generate an empathetic therapist response using Gemini.
-    """
+def therapist_response(user_message: str, history=None, session=None, profile=None) -> str:
+
+    history_text = ""
+    if history:
+        history_text = "\n".join(
+            [f"{m['role']}: {m['content']}" for m in history[-6:]]
+        )
 
     prompt = f"""
 You are a compassionate AI therapist assistant.
 
-Guidelines:
--Make sure the dialogue fits naturally in the response and enhances encouragement, humor, or reflection.
-- Be empathetic and supportive
-- Use a {style} tone
-- Do not give medical diagnoses
-- Encourage reflection and emotional awareness
-- Ask gentle follow-up questions when appropriate
+User Profile:
+{profile}
 
-User message:
-{user_message}
+Session State:
+{session}
+
+Conversation:
+{history_text}
+
+User: {user_message}
+
+Guidelines:
+- Be empathetic
+- No medical diagnosis
+- Encourage reflection
+- Ask follow-up questions
+
+Therapist:
 """
 
     try:
@@ -104,3 +115,18 @@ User message:
         logger.error(f"Gemini API error: {e}")
 
         return "I'm sorry, I'm having trouble responding right now. Please try again in a moment."
+    
+
+def decide_tool(user_message: str):
+    msg = user_message.lower()
+
+    if "journal" in msg or "write this down" in msg:
+        return "journal"
+
+    if "help me reframe" in msg or "negative thought" in msg:
+        return "cbt"
+
+    if any(word in msg for word in ["anxious", "sad", "angry"]):
+        return "mood"
+
+    return None
