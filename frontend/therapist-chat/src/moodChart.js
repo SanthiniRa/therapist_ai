@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
 
+const API_BASE = process.env.REACT_APP_BACKEND_URL || "";
+
 function MoodChart() {
   const [moods, setMoods] = useState([]);
 
   useEffect(() => {
-    fetch("https://crispy-goldfish-wrw7p4x6pvqr35vrp-8000.app.github.dev/mood", {
+    fetch(`${API_BASE}/mood`, {
       credentials: "include",
     })
       .then((res) => res.json())

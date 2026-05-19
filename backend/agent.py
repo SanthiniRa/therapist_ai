@@ -1,8 +1,12 @@
 import os
 import logging
+from dotenv import load_dotenv
 from google import genai
-from .tool import track_mood, save_journal_entry, cbt_reframe
-from .memory import detect_mood
+from tool import TOOLS
+from rag_faiss import get_context
+from memory import detect_mood
+
+load_dotenv()
 # --------------------------------------------------
 # Logging
 # --------------------------------------------------
@@ -14,10 +18,10 @@ logger = logging.getLogger(__name__)
 # Load API Key
 # --------------------------------------------------
 
-API_KEY = "AIzaSyCbsqht0mYD9-VsWYGJw7w_lHweVzFmvgg"
+API_KEY = os.getenv("GOOGLE_API_KEY") or os.getenv("GENAI_API_KEY") or ""
 
 if not API_KEY:
-    raise RuntimeError("GOOGLE_API_KEY environment variable is not set")
+    raise RuntimeError("GOOGLE_API_KEY or GENAI_API_KEY environment variable is not set")
 
 # --------------------------------------------------
 # Gemini Client
@@ -64,16 +68,55 @@ def select_style(user_message: str):
 # Therapist AI Agent
 # --------------------------------------------------
 
-def therapist_response(user_message: str, history=None, session=None, profile=None) -> str:
+def therapist_response(user_message, history=None, session=None, profile=None, user_id=None):
 
+    # -----------------------------
+    # STEP 1: Decide tool
+    # -----------------------------
+    tool_name = decide_tool(user_message)
+    logger.info(f"TOOL SELECTED: {tool_name}")
+    tool_output = None
+
+    if tool_name == "mood":
+        tool_output = TOOLS["track_mood"](user_id, detect_mood(user_message))
+
+    elif tool_name == "journal":
+        tool_output = TOOLS["save_journal_entry"](user_id, user_message)
+
+    elif tool_name == "cbt":
+        tool_output = TOOLS["cbt_reframe"](user_message)
+
+
+    rag_context = get_context(user_message)[:1000]
+    if not rag_context:
+     rag_context = "You can suggest general coping techniques like breathing, journaling, or grounding."
+    logger.info(f"RAG CONTEXT: {rag_context[:200]}")
+    # -----------------------------
+    # STEP 2: Prepare history
+    # -----------------------------
     history_text = ""
     if history:
         history_text = "\n".join(
             [f"{m['role']}: {m['content']}" for m in history[-6:]]
         )
 
+    # -----------------------------
+    # STEP 3: Add tool context
+    # -----------------------------
+    tool_text = ""
+    if tool_output:
+        tool_text = f"\nTool Result:\n{tool_output}\n"
+    logger.info(f"TOOL OUTPUT: {tool_output}")
+    # -----------------------------
+    # STEP 4: Create prompt
+    # -----------------------------
     prompt = f"""
 You are a compassionate AI therapist assistant.
+
+Use the knowledge provided below when relevant.
+
+Therapy Knowledge:
+{rag_context}
 
 User Profile:
 {profile}
@@ -84,19 +127,21 @@ Session State:
 Conversation:
 {history_text}
 
+{tool_text}
+
 User: {user_message}
 
 Guidelines:
 - Be empathetic
-- No medical diagnosis
 - Encourage reflection
+- Use CBT techniques when appropriate
 - Ask follow-up questions
+- Use provided knowledge when useful
 
 Therapist:
 """
 
     try:
-
         logger.info("Sending prompt to Gemini")
 
         response = client.models.generate_content(
@@ -105,17 +150,13 @@ Therapist:
         )
 
         if not response or not response.text:
-            logger.warning("Gemini returned empty response")
-            return "I'm here with you. Could you tell me more about what you're experiencing?"
+            return "I'm here with you. Could you tell me more?"
 
         return response.text
 
     except Exception as e:
-
         logger.error(f"Gemini API error: {e}")
-
-        return "I'm sorry, I'm having trouble responding right now. Please try again in a moment."
-    
+        return "I'm having trouble responding. Please try again."    
 
 def decide_tool(user_message: str):
     msg = user_message.lower()
@@ -123,10 +164,10 @@ def decide_tool(user_message: str):
     if "journal" in msg or "write this down" in msg:
         return "journal"
 
-    if "help me reframe" in msg or "negative thought" in msg:
+    if "reframe" in msg or "negative thought" in msg:
         return "cbt"
 
-    if any(word in msg for word in ["anxious", "sad", "angry"]):
+    if any(word in msg for word in ["anxious", "sad", "angry", "happy"]):
         return "mood"
 
     return None

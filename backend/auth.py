@@ -21,12 +21,11 @@ oauth.register(
 )
 
 app = FastAPI()
-app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://crispy-goldfish-wrw7p4x6pvqr35vrp-3000.app.github.dev"
+        "https://special-happiness-69jgqpw6q5gwf5gj6-3000.app.github.dev"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -35,7 +34,7 @@ app.add_middleware(
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key="super-secret-key-change-this",
+    secret_key=os.getenv("SESSION_SECRET", "super-secret-key-change-this"),
     max_age=3600,
     same_site="lax",      # For dev, use 'lax'; for prod 'none'
     https_only=False      # True in prod (requires HTTPS)
@@ -44,7 +43,7 @@ app.add_middleware(
 @app.get("/login/google")
 async def login(request: Request):
 
-    redirect_uri = "https://crispy-goldfish-wrw7p4x6pvqr35vrp-8000.app.github.dev/auth/google/callback"
+    redirect_uri = "https://special-happiness-69jgqpw6q5gwf5gj6-8000.app.github.dev/auth/google/callback"
 
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
@@ -61,7 +60,7 @@ async def callback(request: Request):
     request.session["user"] = {"email": user["email"], "name": user["name"]}
 
     # Redirect to the AI chat page (React frontend)
-    return RedirectResponse(url="https://crispy-goldfish-wrw7p4x6pvqr35vrp-3000.app.github.dev/chat")
+    return RedirectResponse(url="https://special-happiness-69jgqpw6q5gwf5gj6-3000.app.github.dev/chat")
 
 @app.get("/user")
 async def get_user(request: Request):

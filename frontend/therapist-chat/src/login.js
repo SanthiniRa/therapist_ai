@@ -1,9 +1,12 @@
-import React, { useEffect } from "react";
+import React from "react";
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 
 function Login() {
   const handleLogin = () => {
     // Redirect user to FastAPI Google OAuth login
-    window.location.href = "https://crispy-goldfish-wrw7p4x6pvqr35vrp-8000.app.github.dev/login/google";
+    const loginUrl = BACKEND_URL ? `${BACKEND_URL}/login/google` : "/login/google";
+    window.location.href = loginUrl;
   };
 
   return (

@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 
+const API_BASE = process.env.REACT_APP_BACKEND_URL || "";
+
 function Chat() {
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState("");
@@ -11,7 +13,7 @@ function Chat() {
   // Fetch user session
   // -----------------------------
   useEffect(() => {
-    fetch("https://crispy-goldfish-wrw7p4x6pvqr35vrp-8000.app.github.dev/user", {
+    fetch(`${API_BASE}/user`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -41,9 +43,7 @@ function Chat() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "https://crispy-goldfish-wrw7p4x6pvqr35vrp-8000.app.github.dev/chat",
-        {
+      const response = await fetch(`${API_BASE}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

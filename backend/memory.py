@@ -1,5 +1,7 @@
 import time
 from typing import Dict, List
+import json
+
 
 # -----------------------------
 # In-memory stores (replace later with DB/Redis)
@@ -24,6 +26,8 @@ def add_message(user_id: str, role: str, content: str):
         "content": content,
         "timestamp": time.time()
     })
+
+    trim_conversation(user_id)  # ✅ auto trim
 
 
 def trim_conversation(user_id: str, max_messages: int = 20):
@@ -102,3 +106,25 @@ def update_profile(user_id: str, message: str):
             profile["preferences"].append("prefers concise responses")
 
     profile["last_updated"] = time.time()
+
+    
+def save_memory():
+    with open("memory.json", "w") as f:
+        json.dump({
+            "conversation": conversation_store,
+            "session": session_store,
+            "profile": profile_store
+        }, f)
+
+def load_memory():
+    global conversation_store, session_store, profile_store
+
+    try:
+        with open("memory.json", "r") as f:
+            data = json.load(f)
+
+            conversation_store = data.get("conversation", {})
+            session_store = data.get("session", {})
+            profile_store = data.get("profile", {})
+    except:
+        pass

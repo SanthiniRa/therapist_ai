@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 
+const API_BASE = process.env.REACT_APP_BACKEND_URL || "";
+
 function Journal() {
   const [entries, setEntries] = useState([]);
 
   useEffect(() => {
-    fetch("https://crispy-goldfish-wrw7p4x6pvqr35vrp-8000.app.github.dev/journal", {
+    fetch(`${API_BASE}/journal`, {
       credentials: "include",
     })
       .then((res) => res.json())
