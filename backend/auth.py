@@ -1,32 +1,30 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, RedirectResponse
-from authlib.integrations.starlette_client import OAuth, OAuthError
-from starlette.config import Config
+from authlib.integrations.starlette_client import OAuth
 from starlette.requests import Request
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
-config = Config(".env")
-oauth = OAuth(config)
+from backend.config import settings
 
-oauth.register(
-    name='google',
-    client_id=config('GOOGLE_CLIENT_ID'),
-    client_secret=config('GOOGLE_CLIENT_SECRET'),
+auth = OAuth()
+
+if not settings.google_client_id or not settings.google_client_secret:
+    raise RuntimeError("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables are required")
+
+auth.register(
+    name="google",
+    client_id=settings.google_client_id,
+    client_secret=settings.google_client_secret,
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-    client_kwargs={'scope': 'openid email profile'}
+    client_kwargs={"scope": "openid email profile"},
 )
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://special-happiness-69jgqpw6q5gwf5gj6-3000.app.github.dev"
-    ],
+    allow_origins=settings.cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,33 +32,24 @@ app.add_middleware(
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET", "super-secret-key-change-this"),
-    max_age=3600,
-    same_site="lax",      # For dev, use 'lax'; for prod 'none'
-    https_only=False      # True in prod (requires HTTPS)
+    secret_key=settings.session_secret,
+    max_age=settings.session_max_age,
+    same_site=settings.session_same_site,
+    https_only=settings.session_https_only,
 )
 
 @app.get("/login/google")
 async def login(request: Request):
-
-    redirect_uri = "https://special-happiness-69jgqpw6q5gwf5gj6-8000.app.github.dev/auth/google/callback"
-
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    redirect_uri = settings.oauth_callback_url
+    return await auth.google.authorize_redirect(request, redirect_uri)
 
 
 @app.get("/auth/google/callback")
 async def callback(request: Request):
-    # Get token
-    token = await oauth.google.authorize_access_token(request)
-
-    # Get user info
-    user = await oauth.google.userinfo(token=token)
-
-    # Store user info in session
+    token = await auth.google.authorize_access_token(request)
+    user = await auth.google.userinfo(token=token)
     request.session["user"] = {"email": user["email"], "name": user["name"]}
-
-    # Redirect to the AI chat page (React frontend)
-    return RedirectResponse(url="https://special-happiness-69jgqpw6q5gwf5gj6-3000.app.github.dev/chat")
+    return RedirectResponse(url=settings.oauth_post_login_redirect)
 
 @app.get("/user")
 async def get_user(request: Request):

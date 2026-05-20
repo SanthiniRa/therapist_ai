@@ -23,6 +23,14 @@ This repository contains a simple therapist chat application with a FastAPI back
      export GENAI_API_KEY="AIzaSyCbsqht0mYD9-VsWYGJw7w_lHweVzFmvgg"
      # or export GOOGLE_API_KEY=...
      ```
+   - Optional environment variables for backend configuration:
+     - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Google OAuth credentials
+     - `SESSION_SECRET` — secret used for session cookies
+     - `CORS_ALLOW_ORIGINS` — comma-separated frontend origins
+     - `OAUTH_CALLBACK_URL` — backend callback URL for Google OAuth
+     - `OAUTH_POST_LOGIN_REDIRECT` — frontend redirect after login
+     - `MODEL_NAME` — Gemini model identifier
+     - `RAG_DATA_DIR` — directory for knowledge corpus files
    - Run the server from the `backend` directory:
      ```bash
      cd backend
@@ -41,4 +49,20 @@ This repository contains a simple therapist chat application with a FastAPI back
 
 > ⚠️ Make sure the backend is running before sending messages; otherwise the
 > UI will show a "Failed to fetch" error.
+
+## Testing and Evaluation
+
+- Run backend tests with:
+  ```bash
+  cd /workspaces/therapist_ai
+  PYTHONPATH=. pytest -q tests
+  ```
+- New coverage includes:
+  - configuration loading and env parsing
+  - RAG data loading, chunking, and source-aware retrieval
+  - controller fallback when the LLM service fails
+- For evaluation, check:
+  - whether retrieved knowledge mentions source labels
+  - whether the model response remains empathetic when knowledge is missing
+  - whether rate limiting and auth behavior work correctly in the UI
 

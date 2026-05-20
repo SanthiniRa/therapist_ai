@@ -1,4 +1,5 @@
 from datetime import datetime
+import inspect
 
 mood_logs = {}
 journal_logs = {}
@@ -95,6 +96,15 @@ def cbt_reframe(thought: str):
     }
 
 
+def breathing_tool():
+    return "Try this: inhale 4 sec, hold 7 sec, exhale 8 sec."
+
+
+def maybe_call_tool(mode):
+    if mode == "calm_support":
+        return breathing_tool()
+    return None
+
 # -----------------------------
 # Tool Registry (MUST BE LAST)
 # -----------------------------
@@ -105,4 +115,38 @@ TOOLS = {
     "get_journal_entries": get_journal_entries,
     "search_journal": search_journal,
     "cbt_reframe": cbt_reframe,
+    "breathing_tool": breathing_tool,
+    "maybe_call_tool": maybe_call_tool
 }
+
+
+def validate_tool_args(tool_name: str, args: dict):
+    if tool_name not in TOOLS:
+        raise ValueError(f"Unknown tool: {tool_name}")
+
+    tool_func = TOOLS[tool_name]
+    signature = inspect.signature(tool_func)
+    expected_params = [p for p in signature.parameters.values() if p.name != "user_id"]
+    required_params = [p.name for p in expected_params if p.default is inspect._empty]
+    allowed_params = [p.name for p in expected_params]
+
+    extra = set(args) - set(allowed_params)
+    if extra:
+        raise ValueError(f"Unexpected tool arguments: {sorted(extra)}")
+
+    missing = [name for name in required_params if name not in args]
+    if missing:
+        raise ValueError(f"Missing tool arguments: {sorted(missing)}")
+
+    return True
+
+
+def execute_tool(user_id: str, tool_name: str, args: dict):
+    validate_tool_args(tool_name, args)
+    tool_func = TOOLS[tool_name]
+    signature = inspect.signature(tool_func)
+
+    if "user_id" in signature.parameters:
+        return tool_func(user_id, **args)
+
+    return tool_func(**args)

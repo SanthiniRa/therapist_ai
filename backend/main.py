@@ -1,15 +1,17 @@
+import logging
 import traceback
 
-from fastapi import FastAPI, HTTPException,Request
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from tool import get_mood_history, get_journal_entries
-from agent import therapist_response, safety_check
-from auth import app as auth_app
+from backend.tool import get_mood_history, get_journal_entries
+from backend.agent import client
+from backend.agent_controller import agent_controller
+from backend.auth import app as auth_app
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from rag_faiss import init_rag
-from memory import (
+from backend.rag_faiss import init_rag, add_knowledge
+from backend.memory import (
     get_conversation,
     add_message,
     trim_conversation,
@@ -19,18 +21,31 @@ from memory import (
     get_profile,
     update_profile,
     load_memory,
-    save_memory
+    save_memory,
 )
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+logger = logging.getLogger("therapist_ai")
+
 app = auth_app
-load_memory()
-init_rag()
+
 class ChatRequest(BaseModel):
     message: str
-from rag_faiss import add_knowledge
 
 class KnowledgeRequest(BaseModel):
     text: str
+
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Therapist AI startup: loading memory and initializing RAG.")
+    try:
+        load_memory()
+        init_rag()
+        logger.info("Startup complete.")
+    except Exception as exc:
+        logger.exception("Startup failed")
+        raise
 
 
 @app.post("/add-knowledge")
@@ -45,6 +60,10 @@ app.state.limiter = limiter
 @app.get("/")
 def home():
     return {"status": "Therapist AI running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "message": "Therapist AI is healthy"}
 
 @app.post("/chat")
 @limiter.limit("5/minute")
@@ -81,19 +100,22 @@ async def chat(request: Request, req: ChatRequest):
     # -----------------------------
     # DEBUG (optional)
     # -----------------------------
-    print("USER:", user_message)
+    logger.info("USER: %s", user_message)
 
     # -----------------------------
     # AI RESPONSE
     # -----------------------------
     try:
-        reply = therapist_response(
+        result = agent_controller(
             user_message,
+            user,
+            client.models,
             history=history,
             session=session,
             profile=profile,
-            user_id=user_id   # ✅ IMPORTANT
+            user_id=user_id
         )
+        reply = result["response"]
 
     except Exception as e:
         traceback.print_exc()
@@ -105,10 +127,9 @@ async def chat(request: Request, req: ChatRequest):
     add_message(user_id, "assistant", reply)
 
     trim_conversation(user_id)
-    
     save_memory()
 
-    print("BOT:", reply)
+    logger.info("BOT: %s", reply)
 
     return {"reply": reply}
 
