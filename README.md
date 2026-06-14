@@ -1,4 +1,4 @@
-# AILearning
+# therapist_ai
 
 This repository contains a simple therapist chat application with a FastAPI backend and a React frontend.
 
